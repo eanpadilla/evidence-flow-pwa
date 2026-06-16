@@ -65,4 +65,3 @@ La aplicación está lista para ser desplegada en Vercel.
 3. Asegúrate de añadir `NEXT_PUBLIC_SUPABASE_URL` y `NEXT_PUBLIC_SUPABASE_ANON_KEY` en la configuración de **Environment Variables** en Vercel antes de compilar.
 4. Vercel detectará automáticamente que es un proyecto Next.js y realizará el build (`npm run build`).
 
-

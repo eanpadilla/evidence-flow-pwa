@@ -376,8 +376,34 @@ export default function TaskDetailClient({ task: initialTask, evidenceList: init
 
             {/* 2. Show existing evidence */}
             {evidenceList.length > 0 ? (
-              <div className={styles.tableContainer}>
-                <table className={styles.evidenceTable}>
+              <>
+                {/* Admin Review Panel attached to the latest evidence, displayed as a distinct card above the table */}
+                {isAdmin && task.status === 'submitted' && groupedEvidence.length > 0 && (
+                  <div className={styles.adminPanel} style={{ backgroundColor: 'var(--bg-tertiary)', padding: '20px', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-color)', marginBottom: '24px' }}>
+                    <h3 className={styles.adminTitle} style={{ fontSize: '1.1rem', marginBottom: '16px', color: 'var(--primary)' }}>
+                      <MessageSquare size={20} /> Evaluar Última Entrega
+                    </h3>
+                    <div style={{ marginBottom: '12px' }}>
+                      <p style={{ fontSize: '0.9rem', color: 'var(--text-secondary)' }}>Por favor, revisa la última evidencia enviada antes de tomar una decisión.</p>
+                    </div>
+                    <textarea
+                      className={styles.textarea}
+                      placeholder="Escribe tus comentarios (Obligatorio para rechazar o solicitar cambios)..."
+                      value={adminFeedback}
+                      onChange={(e) => setAdminFeedback(e.target.value)}
+                      disabled={isPending}
+                      style={{ minHeight: '80px', padding: '12px', fontSize: '0.95rem' }}
+                    />
+                    <div className={styles.adminButtons} style={{ marginTop: '16px', display: 'flex', gap: '12px' }}>
+                      <Button variant="outline" onClick={() => handleReview('rejected', groupedEvidence[0].files.map((f: Evidence) => f.id))} isLoading={isPending} icon={<X size={16} />} style={{ border: '1px solid var(--error-border)', color: 'var(--error)', backgroundColor: 'var(--error-bg)', flex: 1 }}>Rechazar</Button>
+                      <Button variant="outline" onClick={() => handleReview('changes_requested', groupedEvidence[0].files.map((f: Evidence) => f.id))} isLoading={isPending} icon={<RefreshCw size={16} />} style={{ border: '1px solid var(--warning-border)', color: 'var(--warning)', backgroundColor: 'var(--warning-bg)', flex: 1 }}>Solicitar Cambios</Button>
+                      <Button onClick={() => handleReview('approved', groupedEvidence[0].files.map((f: Evidence) => f.id))} isLoading={isPending} icon={<Check size={16} />} style={{ backgroundColor: 'var(--success)', border: '1px solid var(--success-border)', flex: 1 }}>Aprobar Entrega</Button>
+                    </div>
+                  </div>
+                )}
+
+                <div className={styles.tableContainer}>
+                  <table className={styles.evidenceTable}>
                   <thead>
                     <tr>
                       <th>Fecha y Usuario</th>
@@ -453,34 +479,13 @@ export default function TaskDetailClient({ task: initialTask, evidenceList: init
                           ) : (
                             <span style={{ color: 'var(--text-muted)', fontSize: '0.85rem', fontStyle: 'italic' }}>Sin revisión</span>
                           )}
-
-                          {/* Admin Review Panel attached to the latest evidence */}
-                          {isAdmin && task.status === 'submitted' && index === 0 && currentPage === 1 && (
-                            <div className={styles.adminPanel} style={{ marginTop: '16px', paddingTop: '16px', borderTop: '1px solid var(--border-color)' }}>
-                              <h3 className={styles.adminTitle} style={{ fontSize: '0.9rem' }}>
-                                <MessageSquare size={16} /> Evaluar Entrega
-                              </h3>
-                              <textarea
-                                className={styles.textarea}
-                                placeholder="Escribe tus comentarios..."
-                                value={adminFeedback}
-                                onChange={(e) => setAdminFeedback(e.target.value)}
-                                disabled={isPending}
-                                style={{ minHeight: '60px', padding: '8px 12px', fontSize: '0.85rem' }}
-                              />
-                              <div className={styles.adminButtons} style={{ marginTop: '8px' }}>
-                                <Button variant="outline" onClick={() => handleReview('rejected', group.files.map((f: Evidence) => f.id))} isLoading={isPending} icon={<X size={14} />} style={{ border: '1px solid var(--error-border)', color: 'var(--error)', backgroundColor: 'var(--error-bg)', padding: '6px', fontSize: '0.8rem' }}>Rechazar</Button>
-                                <Button variant="outline" onClick={() => handleReview('changes_requested', group.files.map((f: Evidence) => f.id))} isLoading={isPending} icon={<RefreshCw size={14} />} style={{ border: '1px solid var(--warning-border)', color: 'var(--warning)', backgroundColor: 'var(--warning-bg)', padding: '6px', fontSize: '0.8rem' }}>Cambios</Button>
-                                <Button onClick={() => handleReview('approved', group.files.map((f: Evidence) => f.id))} isLoading={isPending} icon={<Check size={14} />} style={{ backgroundColor: 'var(--success)', border: '1px solid var(--success-border)', padding: '6px', fontSize: '0.8rem' }}>Aprobar</Button>
-                              </div>
-                            </div>
-                          )}
                         </td>
                       </tr>
                     ))}
                   </tbody>
                 </table>
               </div>
+              </>
             ) : (
               <div className={styles.emptyEvidence}>
                 <FileText size={40} />
