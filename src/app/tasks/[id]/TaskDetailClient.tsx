@@ -383,8 +383,70 @@ export default function TaskDetailClient({ task: initialTask, evidenceList: init
                     <h3 className={styles.adminTitle} style={{ fontSize: '1.1rem', marginBottom: '16px', color: 'var(--primary)' }}>
                       <MessageSquare size={20} /> Evaluar Última Entrega
                     </h3>
-                    <div style={{ marginBottom: '12px' }}>
-                      <p style={{ fontSize: '0.9rem', color: 'var(--text-secondary)' }}>Por favor, revisa la última evidencia enviada antes de tomar una decisión.</p>
+                    <div style={{ marginBottom: '24px', backgroundColor: 'var(--bg-secondary)', padding: '20px', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-color)', display: 'flex', flexWrap: 'wrap', gap: '24px' }}>
+                      {/* Left Column: Context */}
+                      <div style={{ flex: '1 1 300px', display: 'flex', flexDirection: 'column' }}>
+                        <div style={{ marginBottom: '16px' }}>
+                          <span style={{ fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text-muted)', fontWeight: 600, display: 'block', marginBottom: '4px' }}>Detalles de la Entrega</span>
+                          {groupedEvidence[0].title ? (
+                            <h4 style={{ fontSize: '1.1rem', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '8px' }}>{groupedEvidence[0].title}</h4>
+                          ) : (
+                            <h4 style={{ fontSize: '1.1rem', fontWeight: 600, color: 'var(--text-muted)', fontStyle: 'italic', marginBottom: '8px' }}>Sin título</h4>
+                          )}
+                          
+                          {groupedEvidence[0].description ? (
+                            <p style={{ fontSize: '0.95rem', color: 'var(--text-secondary)', lineHeight: 1.5 }}>{groupedEvidence[0].description}</p>
+                          ) : (
+                            <p style={{ fontSize: '0.95rem', color: 'var(--text-muted)', fontStyle: 'italic' }}>Sin descripción adicional.</p>
+                          )}
+                        </div>
+                        
+                        <div style={{ marginTop: 'auto', paddingTop: '16px', borderTop: '1px solid var(--border-color)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <User size={16} color="var(--text-muted)" />
+                          <span style={{ fontWeight: 600, color: 'var(--text-primary)', fontSize: '0.9rem' }}>{groupedEvidence[0].user?.full_name || 'Usuario'}</span>
+                          <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>• {formatDateTime(groupedEvidence[0].submitted_at)}</span>
+                        </div>
+                      </div>
+
+                      {/* Right Column: Files */}
+                      <div style={{ flex: '2 1 400px', backgroundColor: 'var(--bg-primary)', padding: '16px', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-color)' }}>
+                        <h5 style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-secondary)', margin: 0, marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          <FileText size={16} /> Archivos Adjuntos ({groupedEvidence[0].files.length})
+                        </h5>
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: '16px' }}>
+                          {groupedEvidence[0].files.map((ev: Evidence) => (
+                            <div key={ev.id} style={{ border: '1px solid var(--border-color)', borderRadius: 'var(--radius-sm)', padding: '8px', backgroundColor: 'var(--bg-secondary)', transition: 'transform var(--transition-fast)' }}>
+                              {ev.fileUrl ? (
+                                <a
+                                  href={ev.fileUrl}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  style={{ display: 'flex', flexDirection: 'column', gap: '8px', textDecoration: 'none' }}
+                                >
+                                  {isImageFile(ev.file_name) && (
+                                    // eslint-disable-next-line @next/next/no-img-element
+                                    <img
+                                      src={ev.fileUrl}
+                                      alt="Evidencia adjunta"
+                                      style={{ width: '100%', height: '100px', objectFit: 'cover', borderRadius: '4px', border: '1px solid var(--border-color)' }}
+                                    />
+                                  )}
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--primary)', fontSize: '0.85rem', fontWeight: 500, padding: '4px 0' }}>
+                                    {isImageFile(ev.file_name) ? <ExternalLink size={14} /> : <Download size={14} />}
+                                    <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }} title={ev.file_name}>
+                                      {ev.file_name}
+                                    </span>
+                                  </div>
+                                </a>
+                              ) : (
+                                <div style={{ color: 'var(--error)', fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '4px', padding: '16px 0', justifyContent: 'center' }}>
+                                  <AlertCircle size={16} /> Error al cargar
+                                </div>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
                     </div>
                     <textarea
                       className={styles.textarea}
