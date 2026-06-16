@@ -17,7 +17,7 @@ EvidenceFlow es una aplicación web progresiva (PWA) construida con Next.js que 
 
 1. **Autenticación Basada en Roles**: Los usuarios pueden registrarse como `admin` o `user`.
 2. **Panel de Control (Dashboard)**:
-   - Los **Administradores** pueden crear tareas, asignarlas a usuarios específicos, ver estadísticas generales y revisar evidencias enviadas.
+   - Los **Administradores** pueden crear tareas, asignarlas a usuarios específicos, ver estadísticas generales y revisar evidencias enviadas mediante un panel de revisión dividido (Split View) optimizado.
    - Los **Usuarios** pueden ver las tareas que tienen asignadas y enviar múltiples archivos de evidencia por tarea.
 3. **Flujo de Revisión**:
    - `Pendiente` ➔ `En Revisión` (Cuando el usuario sube evidencia).
