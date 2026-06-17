@@ -1,8 +1,8 @@
 import React from 'react';
 import styles from './Card.module.css';
 
-export interface CardProps extends React.HTMLAttributes<HTMLDivElement> {
-  title?: string;
+export interface CardProps extends Omit<React.HTMLAttributes<HTMLDivElement>, 'title'> {
+  title?: React.ReactNode;
   subtitle?: React.ReactNode;
   headerAction?: React.ReactNode;
   footer?: React.ReactNode;

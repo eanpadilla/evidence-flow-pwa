@@ -479,7 +479,7 @@ export default function TaskDetailClient({ task: initialTask, evidenceList: init
                           {groupedEvidence[0].files.map((ev: Evidence) => (
                             <div key={ev.id} style={{ border: '1px solid var(--border-color)', borderRadius: 'var(--radius-sm)', padding: '8px', backgroundColor: 'var(--bg-secondary)', transition: 'transform var(--transition-fast)' }}>
                               <a
-                                href={ev.fileUrl}
+                                href={ev.fileUrl || undefined}
                                 target="_blank"
                                 rel="noopener noreferrer"
                                 onClick={(e) => handleMediaClick(e, ev)}
@@ -488,7 +488,7 @@ export default function TaskDetailClient({ task: initialTask, evidenceList: init
                                 {isImageFile(ev.file_name) && (
                                   // eslint-disable-next-line @next/next/no-img-element
                                   <img
-                                    src={ev.fileUrl}
+                                    src={ev.fileUrl || undefined}
                                     alt="Evidencia adjunta"
                                     style={{ width: '100%', height: '100px', objectFit: 'cover', borderRadius: '4px', border: '1px solid var(--border-color)' }}
                                   />
@@ -563,7 +563,7 @@ export default function TaskDetailClient({ task: initialTask, evidenceList: init
                                   {ev.fileUrl ? (
                                     <div>
                                       <a
-                                        href={ev.fileUrl}
+                                        href={ev.fileUrl || undefined}
                                         target="_blank"
                                         rel="noopener noreferrer"
                                         onClick={(e) => handleMediaClick(e, ev)}
@@ -577,7 +577,7 @@ export default function TaskDetailClient({ task: initialTask, evidenceList: init
                                       {isImageFile(ev.file_name) && (
                                         // eslint-disable-next-line @next/next/no-img-element
                                         <img
-                                          src={ev.fileUrl}
+                                          src={ev.fileUrl || undefined}
                                           alt="Evidencia adjunta"
                                           className={styles.tableMediaPreview}
                                         />
