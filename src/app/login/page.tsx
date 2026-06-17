@@ -143,15 +143,7 @@ export default function LoginPage() {
                 disabled={isPending}
               />
 
-              {mode === 'signup' && (
-                <div className={styles.formGroup}>
-                  <label className={styles.label}>Rol de Cuenta</label>
-                  <select name="role" className={styles.select} required disabled={isPending}>
-                    <option value="user">Usuario (Sube evidencia para sus tareas)</option>
-                    <option value="admin">Administrador (Crea tareas y revisa evidencias)</option>
-                  </select>
-                </div>
-              )}
+
 
               <Button type="submit" fullWidth isLoading={isPending} style={{ marginTop: '8px' }}>
                 {mode === 'login' ? 'Iniciar Sesión' : 'Registrarse'}

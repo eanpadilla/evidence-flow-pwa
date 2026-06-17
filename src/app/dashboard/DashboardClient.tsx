@@ -72,7 +72,7 @@ export default function DashboardClient({ tasks: initialTasks, profiles, userPro
         const assignedProfile = profiles.find(p => p.id === assignedId) || null;
         
         const newTask: Task = {
-          ...res.task,
+          ...(res.task as unknown as Task),
           assigned_profile: assignedProfile,
           creator_profile: userProfile,
         };

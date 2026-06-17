@@ -139,7 +139,7 @@ export default function TaskDetailClient({ task: initialTask, evidenceList: init
     formData.append('taskId', task.id);
     formData.append('title', title);
     formData.append('description', description);
-    
+
     files.forEach(f => {
       formData.append('files', f);
     });
@@ -210,11 +210,11 @@ export default function TaskDetailClient({ task: initialTask, evidenceList: init
   const groupedEvidence = React.useMemo(() => {
     const sorted = [...evidenceList].sort((a, b) => new Date(b.submitted_at).getTime() - new Date(a.submitted_at).getTime());
     const groups: any[] = [];
-    
+
     sorted.forEach((ev) => {
       const lastGroup = groups[groups.length - 1];
       const timeDiff = lastGroup ? Math.abs(new Date(ev.submitted_at).getTime() - new Date(lastGroup.submitted_at).getTime()) : Infinity;
-      
+
       if (
         lastGroup &&
         lastGroup.title === ev.title &&
@@ -234,7 +234,7 @@ export default function TaskDetailClient({ task: initialTask, evidenceList: init
         });
       }
     });
-    
+
     return groups;
   }, [evidenceList]);
 
@@ -340,7 +340,7 @@ export default function TaskDetailClient({ task: initialTask, evidenceList: init
                   label="Selecciona los archivos"
                   multiple={true}
                 />
-                
+
                 <div className={styles.formGroup}>
                   <label className={styles.label}>Notas o Comentarios (Opcional)</label>
                   <textarea
@@ -393,14 +393,14 @@ export default function TaskDetailClient({ task: initialTask, evidenceList: init
                           ) : (
                             <h4 style={{ fontSize: '1.1rem', fontWeight: 600, color: 'var(--text-muted)', fontStyle: 'italic', marginBottom: '8px' }}>Sin título</h4>
                           )}
-                          
+
                           {groupedEvidence[0].description ? (
                             <p style={{ fontSize: '0.95rem', color: 'var(--text-secondary)', lineHeight: 1.5 }}>{groupedEvidence[0].description}</p>
                           ) : (
                             <p style={{ fontSize: '0.95rem', color: 'var(--text-muted)', fontStyle: 'italic' }}>Sin descripción adicional.</p>
                           )}
                         </div>
-                        
+
                         <div style={{ marginTop: 'auto', paddingTop: '16px', borderTop: '1px solid var(--border-color)', display: 'flex', alignItems: 'center', gap: '8px' }}>
                           <User size={16} color="var(--text-muted)" />
                           <span style={{ fontWeight: 600, color: 'var(--text-primary)', fontSize: '0.9rem' }}>{groupedEvidence[0].user?.full_name || 'Usuario'}</span>
@@ -466,87 +466,87 @@ export default function TaskDetailClient({ task: initialTask, evidenceList: init
 
                 <div className={styles.tableContainer}>
                   <table className={styles.evidenceTable}>
-                  <thead>
-                    <tr>
-                      <th>Fecha y Usuario</th>
-                      <th>Detalles</th>
-                      <th>Archivos</th>
-                      <th>Comentarios del Admin</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {paginatedGroups.map((group, index) => (
-                      <tr key={group.id}>
-                        <td>
-                          <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                            <span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{group.user?.full_name || 'Usuario'}</span>
-                            <span className={styles.evidenceDate}>{formatDateTime(group.submitted_at)}</span>
-                          </div>
-                        </td>
-                        <td>
-                          <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', maxWidth: '300px' }}>
-                            {group.title && (
-                              <span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{group.title}</span>
-                            )}
-                            {group.description && (
-                              <span className={styles.evidenceDesc}>{group.description}</span>
-                            )}
-                            {!group.title && !group.description && <span className={styles.evidenceDesc}>Sin detalles</span>}
-                          </div>
-                        </td>
-                        <td>
-                          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                            {group.files.map((ev: Evidence) => (
-                              <div key={ev.id}>
-                                {ev.fileUrl ? (
-                                  <div>
-                                    <a
-                                      href={ev.fileUrl}
-                                      target="_blank"
-                                      rel="noopener noreferrer"
-                                      className={styles.fileLink}
-                                    >
-                                      {isImageFile(ev.file_name) ? <ExternalLink size={16} /> : <Download size={16} />}
-                                      <span style={{ maxWidth: '150px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }} title={ev.file_name}>
-                                        {ev.file_name}
-                                      </span>
-                                    </a>
-                                    {isImageFile(ev.file_name) && (
-                                      // eslint-disable-next-line @next/next/no-img-element
-                                      <img
-                                        src={ev.fileUrl}
-                                        alt="Evidencia adjunta"
-                                        className={styles.tableMediaPreview}
-                                      />
-                                    )}
-                                  </div>
-                                ) : (
-                                  <div style={{ color: 'var(--error)', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                                    <AlertCircle size={14} /> Error
-                                  </div>
-                                )}
-                              </div>
-                            ))}
-                          </div>
-                        </td>
-                        <td>
-                          {group.files[0].admin_feedback ? (
-                            <div style={{ backgroundColor: 'rgba(251, 146, 60, 0.08)', padding: '12px', borderRadius: 'var(--radius-sm)', border: '1px solid rgba(251, 146, 60, 0.2)' }}>
-                              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#fb923c', fontWeight: 600, marginBottom: '6px', fontSize: '0.85rem' }}>
-                                <MessageSquare size={14} />
-                                <span>Feedback</span>
-                              </div>
-                              <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>{group.files[0].admin_feedback}</span>
-                            </div>
-                          ) : (
-                            <span style={{ color: 'var(--text-muted)', fontSize: '0.85rem', fontStyle: 'italic' }}>Sin revisión</span>
-                          )}
-                        </td>
+                    <thead>
+                      <tr>
+                        <th>Fecha y Usuario</th>
+                        <th>Detalles</th>
+                        <th>Archivos</th>
+                        <th>Comentarios del Admin</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+                    </thead>
+                    <tbody>
+                      {paginatedGroups.map((group, index) => (
+                        <tr key={group.id}>
+                          <td>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                              <span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{group.user?.full_name || 'Usuario'}</span>
+                              <span className={styles.evidenceDate}>{formatDateTime(group.submitted_at)}</span>
+                            </div>
+                          </td>
+                          <td>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', maxWidth: '300px' }}>
+                              {group.title && (
+                                <span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{group.title}</span>
+                              )}
+                              {group.description && (
+                                <span className={styles.evidenceDesc}>{group.description}</span>
+                              )}
+                              {!group.title && !group.description && <span className={styles.evidenceDesc}>Sin detalles</span>}
+                            </div>
+                          </td>
+                          <td>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                              {group.files.map((ev: Evidence) => (
+                                <div key={ev.id}>
+                                  {ev.fileUrl ? (
+                                    <div>
+                                      <a
+                                        href={ev.fileUrl}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className={styles.fileLink}
+                                      >
+                                        {isImageFile(ev.file_name) ? <ExternalLink size={16} /> : <Download size={16} />}
+                                        <span style={{ maxWidth: '150px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }} title={ev.file_name}>
+                                          {ev.file_name}
+                                        </span>
+                                      </a>
+                                      {isImageFile(ev.file_name) && (
+                                        // eslint-disable-next-line @next/next/no-img-element
+                                        <img
+                                          src={ev.fileUrl}
+                                          alt="Evidencia adjunta"
+                                          className={styles.tableMediaPreview}
+                                        />
+                                      )}
+                                    </div>
+                                  ) : (
+                                    <div style={{ color: 'var(--error)', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                      <AlertCircle size={14} /> Error
+                                    </div>
+                                  )}
+                                </div>
+                              ))}
+                            </div>
+                          </td>
+                          <td>
+                            {group.files[0].admin_feedback ? (
+                              <div style={{ backgroundColor: 'rgba(251, 146, 60, 0.08)', padding: '12px', borderRadius: 'var(--radius-sm)', border: '1px solid rgba(251, 146, 60, 0.2)' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#fb923c', fontWeight: 600, marginBottom: '6px', fontSize: '0.85rem' }}>
+                                  <MessageSquare size={14} />
+                                  <span>Feedback</span>
+                                </div>
+                                <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>{group.files[0].admin_feedback}</span>
+                              </div>
+                            ) : (
+                              <span style={{ color: 'var(--text-muted)', fontSize: '0.85rem', fontStyle: 'italic' }}>Sin revisión</span>
+                            )}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               </>
             ) : (
               <div className={styles.emptyEvidence}>
@@ -555,7 +555,7 @@ export default function TaskDetailClient({ task: initialTask, evidenceList: init
               </div>
             )}
             {groupedEvidence.length > itemsPerPage && (
-              <Pagination 
+              <Pagination
                 currentPage={currentPage}
                 totalPages={totalPages}
                 onPageChange={setCurrentPage}

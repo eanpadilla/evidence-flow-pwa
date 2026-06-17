@@ -2,11 +2,16 @@
 
 import { createClient } from '@/lib/supabase/server';
 import { revalidatePath } from 'next/cache';
+import { createTaskService, reviewTaskService } from '@/lib/services';
 
+/**
+ * Server Action: Create Task
+ * Thin wrapper — extracts FormData, delegates to service, revalidates cache.
+ */
 export async function createTask(formData: FormData) {
   const title = formData.get('title') as string;
   const description = formData.get('description') as string;
-  const assignedTo = formData.get('assignedTo') as string; // UUID of profile
+  const assignedTo = formData.get('assignedTo') as string;
   const dueDateStr = formData.get('dueDate') as string;
 
   if (!title) {
@@ -15,42 +20,34 @@ export async function createTask(formData: FormData) {
 
   try {
     const supabase = await createClient();
-    
+
     const { data: { user }, error: authError } = await supabase.auth.getUser();
     if (authError || !user) {
       return { success: false, error: 'No autorizado. Por favor inicia sesión nuevamente.' };
     }
 
-    const dueDate = dueDateStr ? new Date(dueDateStr).toISOString() : null;
+    const result = await createTaskService(supabase, {
+      title,
+      description,
+      assignedTo,
+      dueDate: dueDateStr,
+      createdBy: user.id,
+    });
 
-    const { data, error } = await supabase
-      .from('tasks')
-      .insert({
-        title,
-        description,
-        assigned_to: assignedTo || null,
-        created_by: user.id,
-        status: 'pending',
-        due_date: dueDate,
-      })
-      .select()
-      .single();
-
-    if (error) {
-      return { success: false, error: error.message };
+    if (result.success) {
+      revalidatePath('/dashboard');
     }
 
-    revalidatePath('/dashboard');
-    return { success: true, task: data };
-  } catch (error: any) {
-    return { success: false, error: error.message || 'Error al crear la tarea.' };
+    return { success: result.success, error: result.error, task: result.data };
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'Error al crear la tarea.';
+    return { success: false, error: message };
   }
 }
 
 /**
- * Admin reviews a task: approve, reject, or request changes.
- * Business logic: only admins can call this (RLS enforces it).
- * The admin_feedback field stores the admin's comment.
+ * Server Action: Review Task (Admin only)
+ * Validates decision, delegates to service, revalidates affected paths.
  */
 export async function reviewTask(
   taskId: string,
@@ -60,61 +57,21 @@ export async function reviewTask(
 ) {
   try {
     const supabase = await createClient();
+    const result = await reviewTaskService(supabase, {
+      taskId,
+      decision,
+      feedback,
+      evidenceIds,
+    });
 
-    const updateData: Record<string, any> = {
-      status: decision,
-      admin_feedback: feedback || null,
-    };
-
-    const { error } = await supabase
-      .from('tasks')
-      .update(updateData)
-      .eq('id', taskId);
-
-    if (error) {
-      return { success: false, error: error.message };
+    if (result.success) {
+      revalidatePath('/dashboard');
+      revalidatePath(`/tasks/${taskId}`);
     }
 
-    if (evidenceIds && evidenceIds.length > 0) {
-      const { error: evidenceError } = await supabase
-        .from('evidence')
-        .update({ admin_feedback: feedback || null })
-        .in('id', evidenceIds);
-        
-      if (evidenceError) {
-        console.error('Error updating evidence feedback:', evidenceError);
-      }
-    }
-
-    revalidatePath('/dashboard');
-    revalidatePath(`/tasks/${taskId}`);
-    return { success: true };
-  } catch (error: any) {
-    return { success: false, error: error.message };
-  }
-}
-
-/**
- * User submits evidence -> task status moves to 'submitted'.
- * This is called indirectly from the evidence upload action.
- */
-export async function updateTaskStatus(taskId: string, status: 'pending' | 'submitted' | 'approved' | 'rejected' | 'changes_requested') {
-  try {
-    const supabase = await createClient();
-    
-    const { error } = await supabase
-      .from('tasks')
-      .update({ status })
-      .eq('id', taskId);
-
-    if (error) {
-      return { success: false, error: error.message };
-    }
-
-    revalidatePath('/dashboard');
-    revalidatePath(`/tasks/${taskId}`);
-    return { success: true };
-  } catch (error: any) {
-    return { success: false, error: error.message };
+    return result;
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'Error al actualizar la tarea.';
+    return { success: false, error: message };
   }
 }

@@ -6,24 +6,44 @@ EvidenceFlow es una aplicación web progresiva (PWA) construida con Next.js que 
 
 - **Framework**: [Next.js 15+ (App Router)](https://nextjs.org/)
 - **Base de Datos & Auth**: [Supabase](https://supabase.com/)
-- **Almacenamiento**: Supabase Storage
-- **Seguridad**: RLS (Row Level Security) configurado nativamente en la base de datos para restringir acceso según el rol (`admin` o `user`).
-- **Lógica de Servidor**: Server Actions de Next.js (sin exponer la BD en el cliente).
-- **Estilos**: CSS Puro (Vanilla CSS Modules) con un diseño Premium y minimalista (Bento-box, Glassmorphism).
+- **Almacenamiento**: Supabase Storage (bucket privado con URLs firmadas)
+- **Seguridad**: RLS (Row Level Security) + defensa en profundidad en cada capa
+- **Arquitectura**: Capa de servicios desacoplada, preparada para extracción de APIs REST
+- **Estilos**: CSS Puro (Vanilla CSS Modules) con diseño Premium y minimalista
 - **Iconos**: [Lucide React](https://lucide.dev/)
-- **PWA**: Soporte progresivo mediante Manifest y Service Workers generados automáticamente.
+- **PWA**: Soporte progresivo mediante Manifest y Service Workers
 
 ## Funcionalidades Principales
 
-1. **Autenticación Basada en Roles**: Los usuarios pueden registrarse como `admin` o `user`.
+1. **Autenticación Basada en Roles**: Los usuarios se registran siempre como `user`. Los administradores se promueven manualmente desde el panel SQL de Supabase (ver [Seguridad](#seguridad)).
 2. **Panel de Control (Dashboard)**:
-   - Los **Administradores** pueden crear tareas, asignarlas a usuarios específicos, ver estadísticas generales y revisar evidencias enviadas mediante un panel de revisión dividido (Split View) optimizado.
-   - Los **Usuarios** pueden ver las tareas que tienen asignadas y enviar múltiples archivos de evidencia por tarea.
+   - Los **Administradores** pueden crear tareas, asignarlas a usuarios, ver estadísticas y revisar evidencias con un panel de revisión dividido (Split View).
+   - Los **Usuarios** pueden ver sus tareas asignadas y subir múltiples archivos de evidencia.
 3. **Flujo de Revisión**:
-   - `Pendiente` ➔ `En Revisión` (Cuando el usuario sube evidencia).
-   - El admin puede: `Aprobar`, `Rechazar` o `Solicitar Cambios` (requiere adjuntar comentarios de feedback).
-4. **Almacenamiento Seguro**: Las imágenes y documentos subidos se guardan en Supabase Storage, y se generan URLs firmadas de manera segura.
-5. **Responsivo**: El diseño se adapta perfectamente tanto a pantallas de escritorio como a dispositivos móviles.
+   - `Pendiente` → `En Revisión` (usuario sube evidencia)
+   - Admin puede: `Aprobar`, `Rechazar` o `Solicitar Cambios` (requiere feedback)
+4. **Almacenamiento Seguro**: Archivos en Supabase Storage con URLs firmadas (1h de expiración).
+5. **Responsivo**: Adaptado a escritorio y dispositivos móviles.
+
+## Seguridad
+
+> ⚠️ **Admin Signup está CERRADO**. No existe opción pública para registrarse como administrador.
+
+La seguridad sigue un modelo de **defensa en profundidad** con 5 capas:
+
+1. **UI**: No muestra selector de rol admin en el formulario.
+2. **Server Action**: Ignora cualquier rol enviado desde el cliente.
+3. **Servicio**: Hardcodea `role='user'` en la lógica de registro.
+4. **DB Trigger**: El trigger `handle_new_user` siempre inserta `role='user'`.
+5. **RLS Policies**: Bloquean operaciones no autorizadas a nivel de base de datos.
+
+### Promover un usuario a Admin
+
+```sql
+UPDATE public.profiles SET role = 'admin' WHERE email = 'correo@ejemplo.com';
+```
+
+Para más detalles sobre la arquitectura de seguridad, consulta [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
 ## Requisitos Previos
 
@@ -32,14 +52,16 @@ EvidenceFlow es una aplicación web progresiva (PWA) construida con Next.js que 
 
 ## Configuración del Entorno (Supabase)
 
-1. **Crear las tablas**: En el panel de SQL de Supabase, ejecuta el contenido del archivo `supabase_schema.sql` que se encuentra en la raíz del proyecto. Este script creará:
-   - La tabla `profiles` (se enlaza automáticamente con la auth de Supabase vía Triggers).
-   - La tabla `tasks`.
-   - La tabla `evidence`.
-   - Las políticas de seguridad (RLS) para todas las tablas.
-   - El bucket de almacenamiento `evidence` y sus políticas RLS.
+1. **Ejecutar las migraciones SQL**: En el editor SQL de Supabase, ejecuta los archivos de `supabase/migrations/` **en orden numérico**:
+   ```
+   001_initial_schema.sql    → Tablas, tipos y trigger
+   002_rls_policies.sql      → Políticas de seguridad RLS
+   003_storage_setup.sql     → Bucket de almacenamiento
+   004_harden_security.sql   → Endurecimiento de seguridad
+   ```
+   > Si ya tienes la base de datos del esquema anterior, solo ejecuta `004_harden_security.sql`.
 
-2. **Variables de Entorno**: Crea un archivo `.env.local` en la raíz del proyecto e ingresa tus credenciales de Supabase:
+2. **Variables de Entorno**: Crea un archivo `.env.local` en la raíz del proyecto:
    ```env
    NEXT_PUBLIC_SUPABASE_URL=tu_supabase_url
    NEXT_PUBLIC_SUPABASE_ANON_KEY=tu_supabase_anon_key
@@ -59,9 +81,11 @@ Abre [http://localhost:3000](http://localhost:3000) en tu navegador para ver la 
 
 ## Despliegue en Vercel
 
-La aplicación está lista para ser desplegada en Vercel. 
 1. Sube este repositorio a GitHub.
 2. Importa el proyecto en Vercel.
-3. Asegúrate de añadir `NEXT_PUBLIC_SUPABASE_URL` y `NEXT_PUBLIC_SUPABASE_ANON_KEY` en la configuración de **Environment Variables** en Vercel antes de compilar.
-4. Vercel detectará automáticamente que es un proyecto Next.js y realizará el build (`npm run build`).
+3. Configura las **Environment Variables**: `NEXT_PUBLIC_SUPABASE_URL` y `NEXT_PUBLIC_SUPABASE_ANON_KEY`.
+4. Vercel detectará automáticamente que es un proyecto Next.js y realizará el build.
 
+## Documentación Adicional
+
+- [Arquitectura del Sistema](docs/ARCHITECTURE.md) — Capas, reglas de negocio, migraciones, y preparación para APIs.
