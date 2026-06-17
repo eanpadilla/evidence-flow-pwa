@@ -217,14 +217,13 @@ export default function TaskDetailClient({ task: initialTask, evidenceList: init
   const getTimeRemaining = (dueDateStr: string | null) => {
     if (!dueDateStr) return null;
     
-    const due = new Date(dueDateStr);
+    // Parse YYYY-MM-DD directly as local time to avoid UTC-offset shifting it to yesterday
+    const [year, month, day] = dueDateStr.split('T')[0].split('-').map(Number);
+    const due = new Date(year, month - 1, day);
     const today = new Date();
-    // Normalize to midnight
-    due.setHours(0,0,0,0);
-    today.setHours(0,0,0,0);
     
     const diffTime = due.getTime() - today.getTime();
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    const diffDays = Math.round(diffTime / (1000 * 60 * 60 * 24));
     
     if (diffDays < 0) {
       return <span style={{ color: 'var(--error)', fontWeight: 600 }}>Vencida hace {Math.abs(diffDays)} {Math.abs(diffDays) === 1 ? 'día' : 'días'}</span>;
