@@ -34,11 +34,6 @@ CREATE POLICY "profiles_select_all"
   ON public.profiles FOR SELECT
   USING (true);
 
--- Users can only update their own profile
-CREATE POLICY "profiles_update_own"
-  ON public.profiles FOR UPDATE
-  USING (auth.uid() = id);
-
 -- ============================
 -- TASKS
 -- ============================

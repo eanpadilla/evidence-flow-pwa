@@ -37,11 +37,7 @@ La seguridad sigue un modelo de **defensa en profundidad** con 5 capas:
 4. **DB Trigger**: El trigger `handle_new_user` siempre inserta `role='user'`.
 5. **RLS Policies**: Bloquean operaciones no autorizadas a nivel de base de datos.
 
-### Promover un usuario a Admin
 
-```sql
-UPDATE public.profiles SET role = 'admin' WHERE email = 'correo@ejemplo.com';
-```
 
 Para más detalles sobre la arquitectura de seguridad, consulta [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
