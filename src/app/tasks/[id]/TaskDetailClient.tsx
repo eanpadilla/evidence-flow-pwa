@@ -19,8 +19,7 @@ import {
   RefreshCw,
   Send
 } from 'lucide-react';
-import { Button, FileUpload } from '@/components/ui';
-import { Pagination } from '@/components/ui/Pagination';
+import { Button, FileUpload, Modal, ZoomableImage, Pagination } from '@/components/ui';
 import { uploadEvidence } from '@/actions/evidence';
 import { reviewTask } from '@/actions/tasks';
 import styles from './task-detail.module.css';
@@ -39,6 +38,7 @@ interface Task {
   assigned_to: string | null;
   created_by: string | null;
   status: 'pending' | 'submitted' | 'approved' | 'rejected' | 'changes_requested';
+  priority: 'low' | 'medium' | 'high';
   admin_feedback: string | null;
   due_date: string | null;
   created_at: string;
@@ -107,6 +107,7 @@ export default function TaskDetailClient({ task: initialTask, evidenceList: init
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
+  const [previewMedia, setPreviewMedia] = useState<{ url: string, type: 'video' | 'image' } | null>(null);
 
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
@@ -201,9 +202,60 @@ export default function TaskDetailClient({ task: initialTask, evidenceList: init
     }
   };
 
+  const getPriorityBadge = (priority: Task['priority']) => {
+    switch (priority) {
+      case 'high':
+        return <span className={styles.badge} style={{ backgroundColor: 'var(--error-bg)', color: 'var(--error)', borderColor: 'var(--error-border)' }}>Alta</span>;
+      case 'low':
+        return <span className={styles.badge} style={{ backgroundColor: 'var(--success-bg)', color: 'var(--success)', borderColor: 'var(--success-border)' }}>Baja</span>;
+      case 'medium':
+      default:
+        return <span className={styles.badge} style={{ backgroundColor: 'var(--warning-bg)', color: 'var(--warning)', borderColor: 'var(--warning-border)' }}>Media</span>;
+    }
+  };
+
+  const getTimeRemaining = (dueDateStr: string | null) => {
+    if (!dueDateStr) return null;
+    
+    const due = new Date(dueDateStr);
+    const today = new Date();
+    // Normalize to midnight
+    due.setHours(0,0,0,0);
+    today.setHours(0,0,0,0);
+    
+    const diffTime = due.getTime() - today.getTime();
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    
+    if (diffDays < 0) {
+      return <span style={{ color: 'var(--error)', fontWeight: 600 }}>Vencida hace {Math.abs(diffDays)} {Math.abs(diffDays) === 1 ? 'día' : 'días'}</span>;
+    } else if (diffDays === 0) {
+      return <span style={{ color: 'var(--warning)', fontWeight: 600 }}>Vence hoy</span>;
+    } else if (diffDays === 1) {
+      return <span style={{ color: 'var(--warning)', fontWeight: 600 }}>Vence mañana</span>;
+    } else {
+      return <span style={{ color: 'var(--success)', fontWeight: 500 }}>Faltan {diffDays} días</span>;
+    }
+  };
+
   const isImageFile = (fileName: string) => {
     const ext = fileName.split('.').pop()?.toLowerCase();
     return ['png', 'jpg', 'jpeg', 'gif', 'webp'].includes(ext || '');
+  };
+
+  const isVideoFile = (fileName: string) => {
+    const ext = fileName.split('.').pop()?.toLowerCase();
+    return ['mp4', 'webm', 'ogg', 'mov'].includes(ext || '');
+  };
+
+  const handleMediaClick = (e: React.MouseEvent, ev: Evidence) => {
+    if (!ev.fileUrl) return;
+    const isImage = isImageFile(ev.file_name);
+    const isVideo = isVideoFile(ev.file_name);
+    
+    if (isImage || isVideo) {
+      e.preventDefault();
+      setPreviewMedia({ url: ev.fileUrl, type: isVideo ? 'video' : 'image' });
+    }
   };
 
   // Group items by submission (within 1 minute)
@@ -276,7 +328,10 @@ export default function TaskDetailClient({ task: initialTask, evidenceList: init
           {/* Left Column: Task Details */}
           <div className={styles.taskCard}>
             <div className={styles.header}>
-              <h1 className={styles.title}>{task.title}</h1>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
+                <h1 className={styles.title}>{task.title}</h1>
+                {getPriorityBadge(task.priority)}
+              </div>
               {getStatusBadge(task.status)}
             </div>
 
@@ -285,10 +340,17 @@ export default function TaskDetailClient({ task: initialTask, evidenceList: init
             </div>
 
             <div className={styles.infoList}>
-              <div className={styles.infoItem}>
-                <Calendar size={18} className={styles.infoIcon} />
-                <span className={styles.infoLabel}>Vencimiento:</span>
-                <span>{task.due_date ? formatDate(task.due_date) : 'Sin límite'}</span>
+              <div className={styles.infoItem} style={{ flexDirection: 'column', alignItems: 'flex-start', gap: '4px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <Calendar size={18} className={styles.infoIcon} />
+                  <span className={styles.infoLabel}>Vencimiento:</span>
+                  <span>{task.due_date ? formatDate(task.due_date) : 'Sin límite'}</span>
+                </div>
+                {task.due_date && task.status !== 'approved' && (
+                  <div style={{ paddingLeft: '26px' }}>
+                    {getTimeRemaining(task.due_date)}
+                  </div>
+                )}
               </div>
               <div className={styles.infoItem}>
                 <User size={18} className={styles.infoIcon} />
@@ -416,33 +478,33 @@ export default function TaskDetailClient({ task: initialTask, evidenceList: init
                         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: '16px' }}>
                           {groupedEvidence[0].files.map((ev: Evidence) => (
                             <div key={ev.id} style={{ border: '1px solid var(--border-color)', borderRadius: 'var(--radius-sm)', padding: '8px', backgroundColor: 'var(--bg-secondary)', transition: 'transform var(--transition-fast)' }}>
-                              {ev.fileUrl ? (
-                                <a
-                                  href={ev.fileUrl}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  style={{ display: 'flex', flexDirection: 'column', gap: '8px', textDecoration: 'none' }}
-                                >
-                                  {isImageFile(ev.file_name) && (
-                                    // eslint-disable-next-line @next/next/no-img-element
-                                    <img
-                                      src={ev.fileUrl}
-                                      alt="Evidencia adjunta"
-                                      style={{ width: '100%', height: '100px', objectFit: 'cover', borderRadius: '4px', border: '1px solid var(--border-color)' }}
-                                    />
-                                  )}
-                                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--primary)', fontSize: '0.85rem', fontWeight: 500, padding: '4px 0' }}>
-                                    {isImageFile(ev.file_name) ? <ExternalLink size={14} /> : <Download size={14} />}
-                                    <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }} title={ev.file_name}>
-                                      {ev.file_name}
-                                    </span>
+                              <a
+                                href={ev.fileUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                onClick={(e) => handleMediaClick(e, ev)}
+                                style={{ display: 'flex', flexDirection: 'column', gap: '8px', textDecoration: 'none' }}
+                              >
+                                {isImageFile(ev.file_name) && (
+                                  // eslint-disable-next-line @next/next/no-img-element
+                                  <img
+                                    src={ev.fileUrl}
+                                    alt="Evidencia adjunta"
+                                    style={{ width: '100%', height: '100px', objectFit: 'cover', borderRadius: '4px', border: '1px solid var(--border-color)' }}
+                                  />
+                                )}
+                                {isVideoFile(ev.file_name) && (
+                                  <div style={{ width: '100%', height: '100px', backgroundColor: '#000', borderRadius: '4px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                    <span style={{ color: '#fff', fontSize: '0.8rem' }}>▶ Video</span>
                                   </div>
-                                </a>
-                              ) : (
-                                <div style={{ color: 'var(--error)', fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '4px', padding: '16px 0', justifyContent: 'center' }}>
-                                  <AlertCircle size={16} /> Error al cargar
+                                )}
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--primary)', fontSize: '0.85rem', fontWeight: 500, padding: '4px 0' }}>
+                                  {(isImageFile(ev.file_name) || isVideoFile(ev.file_name)) ? <ExternalLink size={14} /> : <Download size={14} />}
+                                  <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }} title={ev.file_name}>
+                                    {ev.file_name}
+                                  </span>
                                 </div>
-                              )}
+                              </a>
                             </div>
                           ))}
                         </div>
@@ -504,9 +566,10 @@ export default function TaskDetailClient({ task: initialTask, evidenceList: init
                                         href={ev.fileUrl}
                                         target="_blank"
                                         rel="noopener noreferrer"
+                                        onClick={(e) => handleMediaClick(e, ev)}
                                         className={styles.fileLink}
                                       >
-                                        {isImageFile(ev.file_name) ? <ExternalLink size={16} /> : <Download size={16} />}
+                                        {(isImageFile(ev.file_name) || isVideoFile(ev.file_name)) ? <ExternalLink size={16} /> : <Download size={16} />}
                                         <span style={{ maxWidth: '150px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }} title={ev.file_name}>
                                           {ev.file_name}
                                         </span>
@@ -518,6 +581,11 @@ export default function TaskDetailClient({ task: initialTask, evidenceList: init
                                           alt="Evidencia adjunta"
                                           className={styles.tableMediaPreview}
                                         />
+                                      )}
+                                      {isVideoFile(ev.file_name) && (
+                                        <div className={styles.tableMediaPreview} style={{ backgroundColor: '#000', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                          <span style={{ color: '#fff', fontSize: '0.8rem' }}>▶ Video</span>
+                                        </div>
                                       )}
                                     </div>
                                   ) : (
@@ -564,6 +632,20 @@ export default function TaskDetailClient({ task: initialTask, evidenceList: init
           </div>
         </div>
       </div>
+
+      <Modal isOpen={!!previewMedia} onClose={() => setPreviewMedia(null)} title="Previsualización de Evidencia">
+        {previewMedia && (
+          <div style={{ display: 'flex', flexDirection: 'column', backgroundColor: '#000', borderRadius: 'var(--radius-md)', height: '80vh', position: 'relative', overflow: 'hidden' }}>
+            {previewMedia.type === 'video' ? (
+              <div style={{ flex: 1, display: 'flex', justifyContent: 'center', alignItems: 'center', padding: '16px' }}>
+                <video src={previewMedia.url} controls autoPlay style={{ width: '100%', height: '100%', objectFit: 'contain', borderRadius: '4px' }} />
+              </div>
+            ) : (
+              <ZoomableImage src={previewMedia.url} alt="Evidencia en pantalla completa" />
+            )}
+          </div>
+        )}
+      </Modal>
     </div>
   );
 }

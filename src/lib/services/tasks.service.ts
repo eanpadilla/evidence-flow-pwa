@@ -13,8 +13,9 @@ import { SupabaseClient } from '@supabase/supabase-js';
 export interface CreateTaskParams {
   title: string;
   description?: string;
-  assignedTo?: string;
-  dueDate?: string;
+  assignedTo: string;
+  dueDate: string;
+  priority?: 'low' | 'medium' | 'high';
   createdBy: string;
 }
 
@@ -32,6 +33,7 @@ export interface ServiceResult<T = void> {
 }
 
 const VALID_DECISIONS = ['approved', 'rejected', 'changes_requested'] as const;
+const VALID_PRIORITIES = ['low', 'medium', 'high'] as const;
 
 /**
  * Creates a new task. Authorization is enforced by RLS (admin only).
@@ -44,16 +46,39 @@ export async function createTaskService(
     return { success: false, error: 'El título de la tarea es requerido.' };
   }
 
-  const dueDate = params.dueDate ? new Date(params.dueDate).toISOString() : null;
+  if (!params.assignedTo?.trim()) {
+    return { success: false, error: 'Debe asignar la tarea a un usuario.' };
+  }
+  
+  if (params.priority && !VALID_PRIORITIES.includes(params.priority)) {
+    return { success: false, error: 'Prioridad inválida.' };
+  }
+
+  if (!params.dueDate) {
+    return { success: false, error: 'La fecha de vencimiento es requerida.' };
+  }
+
+  // Parse the due date and compare with today at midnight UTC to avoid timezone false positives
+  const due = new Date(params.dueDate);
+  const today = new Date();
+  today.setUTCHours(0, 0, 0, 0);
+
+  // Si la fecha enviada (que entra como "YYYY-MM-DD" = UTC) es menor a hoy a medianoche, es inválida.
+  if (due < today) {
+    return { success: false, error: 'La fecha de vencimiento no puede estar en el pasado.' };
+  }
+
+  const dueDate = new Date(params.dueDate).toISOString();
 
   const { data, error } = await supabase
     .from('tasks')
     .insert({
       title: params.title,
       description: params.description || null,
-      assigned_to: params.assignedTo || null,
+      assigned_to: params.assignedTo,
       created_by: params.createdBy,
       status: 'pending',
+      priority: params.priority || 'medium',
       due_date: dueDate,
     })
     .select()

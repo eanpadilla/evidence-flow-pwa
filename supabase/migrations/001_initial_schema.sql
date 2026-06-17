@@ -12,6 +12,9 @@ BEGIN
   IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'task_status') THEN
     CREATE TYPE task_status AS ENUM ('pending', 'submitted', 'approved', 'rejected', 'changes_requested');
   END IF;
+  IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'task_priority') THEN
+    CREATE TYPE task_priority AS ENUM ('low', 'medium', 'high');
+  END IF;
 END $$;
 
 -- 2. Create tables
@@ -27,9 +30,10 @@ CREATE TABLE IF NOT EXISTS public.tasks (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   title TEXT NOT NULL,
   description TEXT,
-  assigned_to UUID REFERENCES public.profiles(id) ON DELETE SET NULL,
+  assigned_to UUID REFERENCES public.profiles(id) ON DELETE CASCADE NOT NULL,
   created_by UUID REFERENCES public.profiles(id) ON DELETE SET NULL,
   status task_status DEFAULT 'pending'::task_status NOT NULL,
+  priority task_priority DEFAULT 'medium'::task_priority NOT NULL,
   admin_feedback TEXT,
   due_date TIMESTAMP WITH TIME ZONE,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL

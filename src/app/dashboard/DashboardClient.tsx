@@ -4,7 +4,7 @@ import React, { useState, useTransition } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Plus, Calendar, User, CheckCircle2, AlertCircle, Clock, ArrowRight, RefreshCw, Loader2 } from 'lucide-react';
-import { Button, Card, Input, Modal } from '@/components/ui';
+import { Button, Card, Input, Modal, Pagination } from '@/components/ui';
 import { createTask } from '@/actions/tasks';
 import styles from './dashboard.module.css';
 
@@ -22,6 +22,7 @@ interface Task {
   assigned_to: string | null;
   created_by: string | null;
   status: 'pending' | 'submitted' | 'approved' | 'rejected' | 'changes_requested';
+  priority: 'low' | 'medium' | 'high';
   due_date: string | null;
   created_at: string;
   assigned_profile?: Profile | null;
@@ -39,9 +40,15 @@ export default function DashboardClient({ tasks: initialTasks, profiles, userPro
   const [tasks, setTasks] = useState<Task[]>(initialTasks);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [filterStatus, setFilterStatus] = useState<string>('all');
+  const [filterUser, setFilterUser] = useState<string>('all');
+  const [isUserDropdownOpen, setIsUserDropdownOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
   const [formError, setFormError] = useState<string | null>(null);
   const [loadingTaskId, setLoadingTaskId] = useState<string | null>(null);
+
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 6;
 
   const isAdmin = userProfile.role === 'admin';
 
@@ -55,9 +62,14 @@ export default function DashboardClient({ tasks: initialTasks, profiles, userPro
 
   // Filter tasks
   const filteredTasks = tasks.filter(task => {
-    if (filterStatus === 'all') return true;
-    return task.status === filterStatus;
+    if (filterStatus !== 'all' && task.status !== filterStatus) return false;
+    if (filterUser !== 'all' && task.assigned_to !== filterUser) return false;
+    return true;
   });
+
+  // Pagination calculations
+  const totalPages = Math.ceil(filteredTasks.length / itemsPerPage);
+  const paginatedTasks = filteredTasks.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
 
   const handleCreateTask = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -78,6 +90,7 @@ export default function DashboardClient({ tasks: initialTasks, profiles, userPro
         };
 
         setTasks([newTask, ...tasks]);
+        setCurrentPage(1); // Go back to first page to see the new task
         setIsModalOpen(false);
       } else {
         setFormError(res.error || 'Error al crear la tarea.');
@@ -97,6 +110,41 @@ export default function DashboardClient({ tasks: initialTasks, profiles, userPro
         return <span className={`${styles.badge} ${styles.badgeChanges}`}><RefreshCw size={12} /> Cambios</span>;
       default:
         return <span className={`${styles.badge} ${styles.badgePending}`}><Clock size={12} /> Pendiente</span>;
+    }
+  };
+
+  const getPriorityBadge = (priority: Task['priority']) => {
+    switch (priority) {
+      case 'high':
+        return <span className={styles.badge} style={{ backgroundColor: 'var(--error-bg)', color: 'var(--error)', borderColor: 'var(--error-border)' }}>Alta</span>;
+      case 'low':
+        return <span className={styles.badge} style={{ backgroundColor: 'var(--success-bg)', color: 'var(--success)', borderColor: 'var(--success-border)' }}>Baja</span>;
+      case 'medium':
+      default:
+        return <span className={styles.badge} style={{ backgroundColor: 'var(--warning-bg)', color: 'var(--warning)', borderColor: 'var(--warning-border)' }}>Media</span>;
+    }
+  };
+
+  const getTimeRemaining = (dueDateStr: string | null) => {
+    if (!dueDateStr) return null;
+    
+    const due = new Date(dueDateStr);
+    const today = new Date();
+    // Normalize to midnight
+    due.setHours(0,0,0,0);
+    today.setHours(0,0,0,0);
+    
+    const diffTime = due.getTime() - today.getTime();
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    
+    if (diffDays < 0) {
+      return <span style={{ color: 'var(--error)', fontWeight: 600 }}>Vencida hace {Math.abs(diffDays)} {Math.abs(diffDays) === 1 ? 'día' : 'días'}</span>;
+    } else if (diffDays === 0) {
+      return <span style={{ color: 'var(--warning)', fontWeight: 600 }}>Vence hoy</span>;
+    } else if (diffDays === 1) {
+      return <span style={{ color: 'var(--warning)', fontWeight: 600 }}>Vence mañana</span>;
+    } else {
+      return <span style={{ color: 'var(--success)', fontWeight: 500 }}>Faltan {diffDays} días</span>;
     }
   };
 
@@ -166,13 +214,100 @@ export default function DashboardClient({ tasks: initialTasks, profiles, userPro
         </div>
 
         {/* Tabs / Filters */}
-        <div style={{ display: 'flex', gap: '8px', marginBottom: '24px', overflowX: 'auto', paddingBottom: '8px' }}>
+        <div style={{ display: 'flex', gap: '12px', marginBottom: '24px', flexWrap: 'wrap', paddingBottom: '8px', alignItems: 'center' }}>
+          {isAdmin && (
+            <div style={{ position: 'relative', flexShrink: 0 }}>
+              <Button
+                variant={filterUser === 'all' ? 'secondary' : 'primary'}
+                onClick={() => setIsUserDropdownOpen(!isUserDropdownOpen)}
+                style={{ textTransform: 'none', padding: '6px 16px', fontSize: '0.85rem', borderRadius: '9999px' }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <User size={14} />
+                  {filterUser === 'all' ? 'Todos los Usuarios' : profiles.find(p => p.id === filterUser)?.email || 'Usuario'}
+                </div>
+              </Button>
+
+              {isUserDropdownOpen && (
+                <>
+                  {/* Invisible overlay to close dropdown when clicking outside */}
+                  <div 
+                    style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 40 }}
+                    onClick={() => setIsUserDropdownOpen(false)}
+                  />
+                  
+                  {/* Dropdown Menu styled like a task card */}
+                  <div 
+                    className={styles.taskCard} 
+                    style={{ 
+                      position: 'absolute', 
+                      top: 'calc(100% + 8px)', 
+                      left: 0, 
+                      zIndex: 50, 
+                      width: 'max-content',
+                      padding: '8px',
+                      backgroundColor: 'var(--bg-secondary)',
+                      boxShadow: 'var(--shadow-lg)',
+                      border: '1px solid var(--border-color)',
+                      borderRadius: 'var(--radius-md)'
+                    }}
+                  >
+                    <div 
+                      onClick={() => { setFilterUser('all'); setCurrentPage(1); setIsUserDropdownOpen(false); }}
+                      style={{ 
+                        padding: '10px 16px', 
+                        cursor: 'pointer', 
+                        borderRadius: 'var(--radius-sm)',
+                        backgroundColor: filterUser === 'all' ? 'var(--bg-tertiary)' : 'transparent',
+                        color: filterUser === 'all' ? 'var(--text-primary)' : 'var(--text-secondary)',
+                        fontSize: '0.85rem',
+                        fontWeight: filterUser === 'all' ? 600 : 400,
+                        transition: 'background-color 0.2s ease'
+                      }}
+                      onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--bg-tertiary)'}
+                      onMouseLeave={(e) => e.currentTarget.style.backgroundColor = filterUser === 'all' ? 'var(--bg-tertiary)' : 'transparent'}
+                    >
+                      Todos los Usuarios
+                    </div>
+                    {profiles
+                      .filter((p) => p.role === 'user')
+                      .map((p) => (
+                        <div
+                          key={p.id}
+                          onClick={() => { setFilterUser(p.id); setCurrentPage(1); setIsUserDropdownOpen(false); }}
+                          style={{ 
+                            padding: '10px 16px', 
+                            cursor: 'pointer', 
+                            borderRadius: 'var(--radius-sm)',
+                            backgroundColor: filterUser === p.id ? 'var(--bg-tertiary)' : 'transparent',
+                            color: filterUser === p.id ? 'var(--text-primary)' : 'var(--text-secondary)',
+                            fontSize: '0.85rem',
+                            fontWeight: filterUser === p.id ? 600 : 400,
+                            transition: 'background-color 0.2s ease'
+                          }}
+                          onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--bg-tertiary)'}
+                          onMouseLeave={(e) => e.currentTarget.style.backgroundColor = filterUser === p.id ? 'var(--bg-tertiary)' : 'transparent'}
+                        >
+                          {p.email}
+                        </div>
+                      ))}
+                  </div>
+                </>
+              )}
+            </div>
+          )}
+          
+          <div style={{ width: '1px', height: '24px', backgroundColor: 'var(--border-color)', margin: '0 4px', flexShrink: 0 }}></div>
+
           {['all', 'pending', 'submitted', 'changes_requested', 'approved', 'rejected'].map((status) => (
             <Button
               key={status}
               variant={filterStatus === status ? 'primary' : 'secondary'}
-              onClick={() => setFilterStatus(status)}
-              style={{ textTransform: 'capitalize', padding: '6px 16px', fontSize: '0.85rem' }}
+              onClick={() => {
+                setFilterStatus(status);
+                setCurrentPage(1);
+              }}
+              style={{ textTransform: 'capitalize', padding: '6px 16px', fontSize: '0.85rem', flexShrink: 0 }}
             >
               {status === 'all' ? 'Todas' : status === 'pending' ? 'Pendientes' : status === 'submitted' ? 'En Revisión' : status === 'changes_requested' ? 'Cambios' : status === 'approved' ? 'Aprobadas' : 'Rechazadas'}
             </Button>
@@ -181,8 +316,8 @@ export default function DashboardClient({ tasks: initialTasks, profiles, userPro
 
         {/* Tasks List */}
         <div className={styles.tasksGrid}>
-          {filteredTasks.length > 0 ? (
-            filteredTasks.map((task) => (
+          {paginatedTasks.length > 0 ? (
+            paginatedTasks.map((task) => (
               <a 
                 href={`/tasks/${task.id}`} 
                 key={task.id} 
@@ -191,7 +326,12 @@ export default function DashboardClient({ tasks: initialTasks, profiles, userPro
               >
                 <Card
                   hoverable
-                  title={task.title}
+                  title={
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      {task.title}
+                      {getPriorityBadge(task.priority)}
+                    </div>
+                  }
                   headerAction={getStatusBadge(task.status)}
                   footer={
                     <div className={styles.cardMetadata}>
@@ -207,6 +347,12 @@ export default function DashboardClient({ tasks: initialTasks, profiles, userPro
                         <span className={styles.metaLabel}>Vencimiento:</span>
                         <span>{task.due_date ? new Date(task.due_date).toLocaleDateString() : 'Sin fecha'}</span>
                       </div>
+                      {task.due_date && task.status !== 'approved' && (
+                        <div className={styles.metaItem} style={{ marginTop: '4px' }}>
+                          <Clock size={14} color="var(--text-muted)" />
+                          {getTimeRemaining(task.due_date)}
+                        </div>
+                      )}
                     </div>
                   }
                   style={{ height: '100%', minHeight: '200px', position: 'relative' }}
@@ -240,6 +386,20 @@ export default function DashboardClient({ tasks: initialTasks, profiles, userPro
             </div>
           )}
         </div>
+
+        {/* Pagination */}
+        {filteredTasks.length > itemsPerPage && (
+          <div style={{ marginTop: '32px' }}>
+            <Pagination 
+              currentPage={currentPage}
+              totalPages={totalPages}
+              onPageChange={(page) => {
+                setCurrentPage(page);
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+              }}
+            />
+          </div>
+        )}
       </div>
 
       {/* Admin Task Creation Modal */}
@@ -267,15 +427,24 @@ export default function DashboardClient({ tasks: initialTasks, profiles, userPro
 
           <div className={styles.formGroup}>
             <label className={styles.label}>Asignar A</label>
-            <select name="assignedTo" className={styles.select} disabled={isPending}>
-              <option value="">-- Sin Asignar --</option>
+            <select name="assignedTo" className={styles.select} disabled={isPending} required defaultValue="">
+              <option value="" disabled>-- Selecciona un Usuario --</option>
               {profiles
                 .filter((p) => p.role === 'user')
                 .map((p) => (
                   <option key={p.id} value={p.id}>
-                    {p.full_name} ({p.email})
+                    {p.email}
                   </option>
                 ))}
+            </select>
+          </div>
+
+          <div className={styles.formGroup}>
+            <label className={styles.label}>Prioridad</label>
+            <select name="priority" className={styles.select} disabled={isPending} defaultValue="medium">
+              <option value="low">Baja</option>
+              <option value="medium">Media</option>
+              <option value="high">Alta</option>
             </select>
           </div>
 
@@ -283,6 +452,8 @@ export default function DashboardClient({ tasks: initialTasks, profiles, userPro
             label="Fecha de Vencimiento"
             type="date"
             name="dueDate"
+            min={new Date().toISOString().split('T')[0]}
+            required
             disabled={isPending}
           />
 

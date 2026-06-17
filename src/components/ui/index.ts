@@ -3,3 +3,5 @@ export * from './Input';
 export * from './Card';
 export * from './Modal';
 export * from './FileUpload';
+export * from './ZoomableImage';
+export * from './Pagination';

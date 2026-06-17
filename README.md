@@ -2,6 +2,8 @@
 
 EvidenceFlow es una aplicación web progresiva (PWA) construida con Next.js que permite a los usuarios gestionar tareas y subir evidencias (capturas, PDFs, etc.) sobre su realización, mientras que los administradores pueden revisar, aprobar, rechazar o solicitar cambios sobre dichas evidencias.
 
+**Desarrollado y mantenido en solitario por Carlos.**
+
 ## Tecnologías Utilizadas
 
 - **Framework**: [Next.js 15+ (App Router)](https://nextjs.org/)
@@ -17,13 +19,16 @@ EvidenceFlow es una aplicación web progresiva (PWA) construida con Next.js que 
 
 1. **Autenticación Basada en Roles**: Los usuarios se registran siempre como `user`. Los administradores se promueven manualmente desde el panel SQL de Supabase (ver [Seguridad](#seguridad)).
 2. **Panel de Control (Dashboard)**:
-   - Los **Administradores** pueden crear tareas, asignarlas a usuarios, ver estadísticas y revisar evidencias con un panel de revisión dividido (Split View).
+   - Los **Administradores** pueden crear tareas, asignarlas a usuarios, ver estadísticas y revisar evidencias con un panel de revisión dividido (Split View). También disponen de **filtros avanzados** combinados (por Estado y por Usuario).
    - Los **Usuarios** pueden ver sus tareas asignadas y subir múltiples archivos de evidencia.
-3. **Flujo de Revisión**:
-   - `Pendiente` → `En Revisión` (usuario sube evidencia)
-   - Admin puede: `Aprobar`, `Rechazar` o `Solicitar Cambios` (requiere feedback)
-4. **Almacenamiento Seguro**: Archivos en Supabase Storage con URLs firmadas (1h de expiración).
-5. **Responsivo**: Adaptado a escritorio y dispositivos móviles.
+3. **Flujo de Tareas y Revisión**:
+   - Creación estricta: Fechas de vencimiento y usuario asignado son **obligatorios** (validado hasta la Base de Datos).
+   - Sistema de **Prioridades** (Baja, Media, Alta) y cálculo automático de **Tiempo Restante** (Vence hoy, Vencida hace X días, etc.).
+   - Ciclo de vida: `Pendiente` → `En Revisión` (usuario sube evidencia). Admin puede: `Aprobar`, `Rechazar` o `Solicitar Cambios` (requiere feedback).
+4. **Almacenamiento Seguro y Límite de 10MB**: Archivos en Supabase Storage con URLs firmadas (1h de expiración). El sistema limita automáticamente archivos pesados para mantener el flujo limpio.
+5. **Experiencia Premium (UX)**:
+   - Componente **ZoomableImage** que intercepta clics en las evidencias para abrir un Modal inmersivo con zoom y arrastre (Drag & Pan).
+   - Interfaz Responsiva (Mobile-First) con componentes reutilizables como `<Pagination />` en ambas vistas.
 
 ## Seguridad
 
@@ -36,8 +41,6 @@ La seguridad sigue un modelo de **defensa en profundidad** con 5 capas:
 3. **Servicio**: Hardcodea `role='user'` en la lógica de registro.
 4. **DB Trigger**: El trigger `handle_new_user` siempre inserta `role='user'`.
 5. **RLS Policies**: Bloquean operaciones no autorizadas a nivel de base de datos.
-
-
 
 Para más detalles sobre la arquitectura de seguridad, consulta [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
@@ -85,3 +88,7 @@ Abre [http://localhost:3000](http://localhost:3000) en tu navegador para ver la 
 ## Documentación Adicional
 
 - [Arquitectura del Sistema](docs/ARCHITECTURE.md) — Capas, reglas de negocio, migraciones, y preparación para APIs.
+
+---
+
+*Diseñado y desarrollado por Carlos.*

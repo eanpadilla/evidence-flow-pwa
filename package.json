@@ -2,6 +2,7 @@
   "name": "pwa",
   "version": "0.1.0",
   "private": true,
+  "author": "Carlos",
   "scripts": {
     "dev": "next dev --webpack",
     "build": "next build",

@@ -15,8 +15,8 @@ export interface FileUploadProps {
 
 export const FileUpload: React.FC<FileUploadProps> = ({
   label,
-  accept = 'image/*,application/pdf',
-  maxSizeMB = 5,
+  accept = 'image/*,application/pdf,video/*',
+  maxSizeMB = 10,
   onChange,
   value = [],
   multiple = false
@@ -31,7 +31,7 @@ export const FileUpload: React.FC<FileUploadProps> = ({
   useEffect(() => {
     const newPreviews: Record<string, string> = {};
     value.forEach(file => {
-      if (file.type.startsWith('image/')) {
+      if (file.type.startsWith('image/') || file.type.startsWith('video/')) {
         newPreviews[file.name] = URL.createObjectURL(file);
       }
     });
@@ -174,8 +174,12 @@ export const FileUpload: React.FC<FileUploadProps> = ({
               </div>
               {previews[file.name] && (
                 <div className={styles.previewContainer}>
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={previews[file.name]} alt="File preview" className={styles.previewImage} />
+                  {file.type.startsWith('video/') ? (
+                    <video src={previews[file.name]} controls className={styles.previewImage} style={{ objectFit: 'contain', backgroundColor: '#000' }} />
+                  ) : (
+                    /* eslint-disable-next-line @next/next/no-img-element */
+                    <img src={previews[file.name]} alt="File preview" className={styles.previewImage} />
+                  )}
                 </div>
               )}
             </div>

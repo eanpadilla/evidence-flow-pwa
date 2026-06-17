@@ -13,6 +13,7 @@ export async function createTask(formData: FormData) {
   const description = formData.get('description') as string;
   const assignedTo = formData.get('assignedTo') as string;
   const dueDateStr = formData.get('dueDate') as string;
+  const priority = formData.get('priority') as 'low' | 'medium' | 'high' | undefined;
 
   if (!title) {
     return { success: false, error: 'El título de la tarea es requerido.' };
@@ -31,6 +32,7 @@ export async function createTask(formData: FormData) {
       description,
       assignedTo,
       dueDate: dueDateStr,
+      priority,
       createdBy: user.id,
     });
 
